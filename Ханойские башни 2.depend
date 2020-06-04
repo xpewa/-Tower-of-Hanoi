@@ -1,0 +1,24 @@
+# depslib dependency file v1.0
+1590846971 source:c:\users\xpewa\onedrive\Рабочий стол\Информатика\Ханойская башня\Ханойские башни 2\main.cpp
+	<iostream>
+	<windows.h>
+	"ctime"
+	"conio.h"
+	<string>
+
+1590863853 source:c:\users\xpewa\onedrive\Рабочий стол\Информатика\Ханойские башни 2\main.cpp
+	<iostream>
+	<windows.h>
+	"ctime"
+	"conio.h"
+	<string>
+	<cmath>
+
+1591277608 source:c:\users\xpewa\onedrive\Рабочий стол\-tower-of-hanoi\Ханойские башни 2\main.cpp
+	<iostream>
+	<windows.h>
+	"ctime"
+	"conio.h"
+	<string>
+	<cmath>
+

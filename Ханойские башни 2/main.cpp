@@ -5,172 +5,194 @@
 #include <string>
 #include <cmath>
 
-void start();
-void startMenu(int switcher);
-void rules();
-void typePlay(int switcher);
-void enterSize();
-void playClassic();
-void playBicolor();
-void playMagnet();
-void drawClassic(int up);
-void drawBicolor(int up);
-void drawMagnet(int up);
-int checkWin();
-void Win();
-void moveToverClassic(int amount, int point1, int point2, int temp);
-void doMoveClassic(int point1, int point2);
+void start();//заставка
+void startMenu(int switcher);//выбор действия(играть, смотреть)
+void rules();//правила
+void typePlay(int switcher);//выбор типа игры
+void enterSize();//ввод количества дисков
+void play();//основная функция для игры
+int getLast(int i);//возвращает номер последнего диска на столбе i
+void draw(int up);//рисует игровое поле
+void drawData(int data);//рисует диски
+int checkWin();//проверяет наступила ли победа
+void Win();//победа!
+void moveTover(int amount, int point1, int point2, int temp);//двигает башни (в основном для классической игры)
+void doMove(int point1, int point2);//двигает диски
+void moveToverBicolor(int amount, int point1, int point2, int temp);//алгоритм для двуцветной игры
+void BildBicolor(int amount, int point1, int point2, int temp);//строит единую башню из двух цветных
+void DestroyBicolor(int amount, int point1, int point2, int temp);//разбивает единую башню на две однотонных
+void MTM_1(int n, int i, int s, int d);//сокращенно moveToverMagnit
+void MTM_2(int n, int s, int d, int i);//нужны для алгоритма магнитной башни
+bool checkColor(int i);//проверяет какого цвета диск (для двуцветной башни)
+bool checkMove(int i, int k);//проверяет, правильный ли ход
 
-
-const int NotUsed = system( "color E8" );
-short watchOrPlay = 1; //1-play, 2-watch
-short tPlay = 1; //1-классическая, 2-двухцветная, 3-магнитная
+const int NotUsed = system( "color E8" );//цвет фона и букв
+short watchOrPlay = 1; //Что мы будем делать? 1-играть, 2-смотреть
+short tPlay = 1; //Какой тип игры? 1-классическая, 2-двухцветная, 3-магнитная
 short allSize = 3;//кол-во дисков
 short step = 0;//номер хода
-bool flag1 = 0;
+bool flag1 = 0;//если поднят флаг, значит диск (1,2 или 3) в воздухе
 bool flag2 = 0;
 bool flag3 = 0;
 
-std::string Classic[10] = {"        |        ", "        0        ", "       OOO       ", "      OOOOO      ", "     OOOOOOO     ",
+//для рисования дисков
+std::string Classic[10] = {"        |        ", "        O        ", "       OOO       ", "      OOOOO      ", "     OOOOOOO     ",
                     "    OOOOOOOOO    ", "   OOOOOOOOOOO   ", "  OOOOOOOOOOOOO  ", " OOOOOOOOOOOOOOO ", "OOOOOOOOOOOOOOOOO"};
-std::string Bicolor[10] = {"        |        ", "        *        ", "       ***       ", "      *****      ", "     *******     ",
-                    "    *********    ", "   ***********   ", "  *************  ", " *************** ", "*****************"};
+std::string Bicolor[10] = {"        |        ", "        V        ", "       VVV       ", "      VVVVV      ", "     VVVVVVV     ",
+                    "    VVVVVVVVV    ", "   VVVVVVVVVVV   ", "  VVVVVVVVVVVVV  ", " VVVVVVVVVVVVVVV ", "VVVVVVVVVVVVVVVVV"};
+std::string Plus[10] = {"        |        ", "       |+|       ", "      |+++|      ", "     |+++++|     ", "    |+++++++|    ",
+                    "   |+++++++++|   ", "  |+++++++++++|  ", " |+++++++++++++| ", "|+++++++++++++++|", "|+++++++++++++++++|"};
+std::string Minus[10] = {"        |        ", "       |-|       ", "      |---|      ", "     |-----|     ", "    |-------|    ",
+                    "   |---------|   ", "  |-----------|  ", " |-------------| ", "|---------------|", "|-----------------|"};
 
+//основная структура - в ней всё, что происходит с дисками
 struct Hanoi_type {
-    Hanoi_type() {}
-    Hanoi_type(int s)
-    : size1(s)
-    , data1(new int[s])
-    , size2(0), size3(0)
-    , data2(new int[s]), data3(new int[s])
+    Hanoi_type(int s)//конструктор
+    : size1(s)//резмер первого массива
+    , data1(new int[2*s+1])//первый столб
+    , size2(s), size3(s)
+    , data2(new int[2*s+1]), data3(new int[2*s+1])//второй и третий столбы
     {
-        for (int i=0; i<=s; ++i) data1[i] = i+1;
-        for (int i=0; i<=s; ++i) data2[i] = 0;
-        for (int i=0; i<=s; ++i) data3[i] = 0;
+        for (int i=0; i<=2*size1; ++i) data1[i] = 0;//заполнение массивов нулями (для рисования палочек)
+        for (int i=0; i<=2*size1; ++i) data2[i] = 0;
+        for (int i=0; i<=2*size1; ++i) data3[i] = 0;
     }
 
-    Hanoi_type(int a, int b)
-    : size1(a)
-    , data1(new int[a])
-    , size2(a), size3(0)
-    , data2(new int[a]), data3(new int[a])
+    Classic()//создаём диски для классической игры
     {
-        for (int i=0; i<=a; ++i) data1[i] = i+1;
-        for (int i=0; i<=a; ++i) data2[i] = -(i+1);
-        for (int i=0; i<=a; ++i) data3[i] = 0;
+        for (int i=2*allSize; i>=allSize; --i) data1[i] = i+1-allSize;//чем больше номер диска, тем он больше
+    }
+    Bicolor()//для двухцветной
+    {
+        for (int i=2*allSize; i>=allSize; --i) data1[i] = i+1-allSize;//на первом столбе диски положительные,
+        for (int i=2*allSize; i>=allSize; --i) data2[i] = -(i+1-allSize);//на втором - отрицательные
+    }
+    Magnit()//для магнитной
+    {
+        for (int i=2*allSize; i>=allSize; --i) data1[i] = i+1-allSize;//это верхняя чать дисков - остальное дорисовываем
     }
 
-    ~Hanoi_type() {
+    ~Hanoi_type() { //деструктор
         delete [] data1;
         delete [] data2;
         delete [] data3;
     }
 
-    OnetoTwo() {
-        int n_i = 0;
-        int n_s = 0;
-        for (int i=0; i<=allSize; ++i)
+    OnetoTwo() { //перемещает верхний диск с 1 столба на 2 (из конца первого массива на конец второго)
+        int n_s = 0;//размер диска
+        for (int i=0; i<=2*allSize; ++i) //находим верхний диск
             if (data1[i]!=0) {
-                n_i = i;
-                n_s = data1[i];
-                data1[i]=0;
+                n_s = data1[i]; //запоминаем размер
+                data1[i]=0; //удаляем с 1 стодба
                 break;
             }
-        data2[n_i] = n_s;
+        for (int i=2*allSize-1; i>=0; --i) //находим первое с конца не занятое место
+            if (data2[i]==0)
+                {data2[i] = n_s; break;} //вставляем наш диск
+
     }
-    OnetoThree() {
+    OnetoThree() { //здесь и далее - аналогично
         int n_i = 0;
         int n_s = 0;
-        for (int i=0; i<=allSize; ++i)
+        for (int i=0; i<=2*allSize; ++i)
             if (data1[i]!=0) {
                 n_i = i;
                 n_s = data1[i];
                 data1[i]=0;
                 break;
             }
-        data3[n_i] = n_s;
+        for (int i=2*allSize-1; i>=0; --i)
+            if (data3[i]==0)
+                {data3[i] = n_s; break;}
     }
     TwotoThree() {
         int n_i = 0;
         int n_s = 0;
-        for (int i=0; i<=allSize; ++i)
+        for (int i=0; i<=2*allSize; ++i)
             if (data2[i]!=0) {
                 n_i = i;
                 n_s = data2[i];
                 data2[i]=0;
                 break;
             }
-        data3[n_i] = n_s;
+        for (int i=2*allSize-1; i>=0; --i)
+            if (data3[i]==0)
+                {data3[i] = n_s; break;}
     }
     TwotoOne() {
         int n_i = 0;
         int n_s = 0;
-        for (int i=0; i<=allSize; ++i)
+        for (int i=0; i<=2*allSize; ++i)
             if (data2[i]!=0) {
                 n_i = i;
                 n_s = data2[i];
                 data2[i]=0;
                 break;
             }
-        data1[n_i] = n_s;
+        for (int i=2*allSize-1; i>=0; --i)
+            if (data1[i]==0)
+                {data1[i] = n_s; break;}
     }
     ThreetoOne() {
         int n_i = 0;
         int n_s = 0;
-        for (int i=0; i<=allSize; ++i)
+        for (int i=0; i<=2*allSize; ++i)
             if (data3[i]!=0) {
                 n_i = i;
                 n_s = data3[i];
                 data3[i]=0;
                 break;
             }
-        data1[n_i] = n_s;
+        for (int i=2*allSize-1; i>=0; --i)
+            if (data1[i]==0)
+                {data1[i] = n_s; break;}
     }
     ThreetoTwo() {
         int n_i = 0;
         int n_s = 0;
-        for (int i=0; i<=allSize; ++i)
+        for (int i=0; i<=2*allSize; ++i)
             if (data3[i]!=0) {
                 n_i = i;
                 n_s = data3[i];
                 data3[i]=0;
                 break;
             }
-        data2[n_i] = n_s;
+        for (int i=2*allSize-1; i>=0; --i)
+            if (data2[i]==0)
+                {data2[i] = n_s; break;}
     }
 
 
-    int s;
-    int size1;
-    int size2;
+    int s; //размеры, про которые я забыла и поэтому никак не использовала
+    int size1;//но переделывать программу лень
+    int size2;//их можно удалить, но пусть останутся
     int size3;
-    int * data1;
+    int * data1;//столбы-массивы
     int * data2;
     int * data3;
 };
 
-Hanoi_type Hanoi(3);
-Hanoi_type Hanoi2(3, 3);
+Hanoi_type Hanoi(11);//создаём переменную ханои типа ханои максимального размера
 
 void start()
 {
-    setlocale(0, "rus");//кодировка
-    system("mode con cols=80 lines=20");//задание размеров окна консоли
+    setlocale(0, "rus");//кодировка (чтобы отображались русские буквы)
+    system("mode con cols=80 lines=20");//задание размеров окна консоли 80 20
     system("title Ханойские башни");//задание описания окна консоли
     HANDLE hCons = GetStdHandle(STD_OUTPUT_HANDLE);//получение хендла
     CONSOLE_CURSOR_INFO cursor = { 100, false };//число от 1 до 100 размер курсора в процентах; false\true - видимость
     SetConsoleCursorInfo(hCons, &cursor);//применение заданных параметров курсора
-    system("cls");
+    system("cls");//очистка консоли
     std::cout<<"\n\n\n\n\n\n\n\n"
  "                                  ХАНОЙСКИЕ\n\n"
  "                                    бАШНИ";
-    Sleep(3000);
+    Sleep(3000);//задержка
 }
 
 void startMenu(int switcher)
 {
-    system("cls");
-    switch (switcher)
+    system("cls");//очистка экрана
+    switch (switcher)//возможные типы текста на экране
     {
     case 1:
         std::cout << "\n\n\n\n\n\n                                   < ИГРАТЬ! >\n\n\n                                 СМОТРЕТЬ РЕШЕНИЕ\n\n\n                                     ПРАВИЛА";
@@ -235,6 +257,8 @@ void typePlay(int switcher)
         break;
     }
     int choice = _getch(); //считанный символ
+    if (choice == 27)
+        startMenu(1);
     if (choice == 224 || choice == 0)//любая стрелка
         choice = _getch();
     if (choice == 72)//вверх
@@ -267,122 +291,137 @@ void typePlay(int switcher)
 void enterSize()
 {
     system("cls");
-    std::cout << "Количество дисков?" <<std::endl;
+    std::cout << "\n\n                      Количество дисков?" <<std::endl;
+    std::cout << "\n                    -> ";
     std::cin >> ::allSize;
-    Hanoi_type Hanoi(allSize);
-    Hanoi_type Hanoi2(allSize, allSize);
 
-    if (tPlay == 1) drawClassic(0);
-    if (tPlay == 2) drawBicolor(0);
-    if (tPlay == 3) drawMagnet(0);
+    ::Hanoi_type Hanoi(allSize);//переназначаем тип ханои (не уверена, что так можно)
+
+    if (tPlay == 1) ::Hanoi.Classic();//если тип игры классический, то и заполняем классически и т.п.
+    if (tPlay == 2) ::Hanoi.Bicolor();
+    if (tPlay == 3) ::Hanoi.Magnit();
+    draw(0);//рисуем поле, соответствующее нашей структере ханои
 }
 
-void playClassic()
+bool checkMove(int i, int k) //i - куда ходим, k - откуда
 {
-    ::step++;
+    int one = Hanoi.data1[getLast(1)]; int two = Hanoi.data2[getLast(2)]; int three = Hanoi.data3[getLast(3)];//верхние диски
+//учитываем, что нельзя класть больший диск на меньший (только если меньший = 0),
+//нельзя походить ничем и для магнитной игры - полярность
+    if (i==1 && k==2 && (abs(one)>=abs(two) || abs(one)==0) && abs(two)!=0 && ((tPlay == 3 && ((one>=0 && two>=0) || (one<=0 && two<=0))) || tPlay !=3))
+        return true;
+    if (i==1 && k==3 && (abs(one)>=abs(three) || abs(one)==0) && abs(three)!=0 && ((tPlay == 3 && ((one>=0 && three>=0) || (one<=0 && three<=0))) || tPlay !=3))
+        return true;
+    if (i==2 && k==1 && (abs(two)>=abs(one) || abs(two)==0) && abs(one)!=0 && ((tPlay == 3 && ((one>=0 && two>=0) || (one<=0 && two<=0))) || tPlay !=3))
+        return true;
+    if (i==2 && k==3 && (abs(two)>=abs(three) || abs(two)==0) && abs(three)!=0 && ((tPlay == 3 && ((three>=0 && two>=0) || (three<=0 && two<=0))) || tPlay !=3))
+        return true;
+    if (i==3 && k==1 && (abs(three)>=abs(one) || abs(three)==0) && abs(one)!=0 && ((tPlay == 3 && ((one>=0 && three>=0) || (one<=0 && three<=0))) || tPlay !=3))
+        return true;
+    if (i==3 && k==2 && (abs(three)>=abs(two) || abs(three)==0) && abs(two)!=0 && ((tPlay == 3 && ((three>=0 && two>=0) || (three<=0 && two<=0))) || tPlay !=3))
+        return true;
+    return 0;
+}
 
-    int one = 0; int two = 0; int three = 0;
-    for (int j=0; j<allSize; ++j) //для проверки хода
-        if (Hanoi.data1[j]!=0) {
-            one = Hanoi.data1[j];
-            break;
-        }
-    for (int j=0; j<allSize; ++j)
-        if (Hanoi.data2[j]!=0) {
-            two = Hanoi.data2[j];
-            break;
-        }
-    for (int j=0; j<allSize; ++j)
-        if (Hanoi.data3[j]!=0) {
-            three = Hanoi.data3[j];
-            break;
-        }
+void play()//вызывается, если играем
+{
+    ::step++;//считаем шаги
 
     int choice = _getch();
-    if (choice == 49) {
-        if (!flag1 && !flag2 && !flag3) {
-            ::flag1 = 1;
-            drawClassic(1);
+    if (choice == 27)//если esc
+        startMenu(1);
+
+    if (choice == 49) {//если выбрали башню 1
+        if (!flag1 && !flag2 && !flag3) {//если диска в воздухе нет
+            ::flag1 = 1;//поднимаем диск с 1 башни
+            if (tPlay == 3) Hanoi.data1[getLast(1)] = -Hanoi.data1[getLast(1)];//если игра магнитная - меняем полярность
+            draw(1);//рисуем поднятый диск
             choice = _getch();
         }
         else {
-            if (flag1) {
-                ::flag1 = 0;
-                drawClassic(0);
+            if (flag1) {//если до этого был поднят диск на 1 башне
+                ::flag1 = 0;//опускаем обратно
+                if (tPlay == 3) Hanoi.data1[getLast(1)] = -Hanoi.data1[getLast(1)];//возвращаем полярность
+                draw(0);//рисуем опущенный диск
                 choice = _getch();
             }
-
-            if (flag2 && one<two && one!=0 || two==0) {system("color E4"); std::cerr << "\nТак нельзя!!!"; playClassic();}
-            if (flag2 && (one>two || one==0) && two!=0) {
+            //если до этого был поднят диск на 2 башне и он не модет быть опущен на 1 - ругаемся
+            if (flag2 && !checkMove(1, 2)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
+            //если может - опускаем
+            if (flag2 && checkMove(1, 2)) {
                 ::flag2 = 0;
                 Hanoi.TwotoOne();
-                drawClassic(0);
+                draw(0);
                 choice = _getch();
             }
-
-            if (flag3 && one<three && one!=0 || three==0) {system("color E4"); std::cerr << "\nТак нельзя!!!"; playClassic();}
-            if (flag3 && (one>three || one==0) && three!=0) {
+            //далее всё аналогично
+            if (flag3 && !checkMove(1, 3)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
+            if (flag3 && checkMove(1, 3)) {
                 ::flag3 = 0;
                 Hanoi.ThreetoOne();
-                drawClassic(0);
+                draw(0);
                 choice = _getch();
             }
         }
     }
-    if (choice == 50) {
+    if (choice == 50) { //если нажали 2
         if (!flag2 && !flag1 && !flag3) {
             ::flag2 = 1;
-            drawClassic(2);
+            if (tPlay == 3) Hanoi.data2[getLast(2)] = -Hanoi.data2[getLast(2)];
+            draw(2);
             choice = _getch();
         }
         else {
             if (flag2) {
                 ::flag2 = 0;
-                drawClassic(0);
+                if (tPlay == 3) Hanoi.data2[getLast(2)] = -Hanoi.data2[getLast(2)];
+                draw(0);
                 choice = _getch();
             }
-            if (flag1 && two<one && two!=0 || one==0) {system("color E4"); std::cerr << "\nТак нельзя!!!"; playClassic();}
-            if (flag1 && (two>one || two==0) && one!=0) {
+            if (flag1 && !checkMove(2, 1)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
+            if (flag1 && checkMove(2, 1)) {
                 ::flag1 = 0;
                 Hanoi.OnetoTwo();
-                drawClassic(0);
+                draw(0);
                 choice = _getch();
             }
 
-            if (flag3 && two<three && two!=0 || three==0) {system("color E4"); std::cerr << "\nТак нельзя!!!"; playClassic();}
-            if (flag3 && (two>three || two==0) && three!=0) {
+            if (flag3 && !checkMove(2, 3)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
+            if (flag3 && checkMove(2, 3)) {
                 ::flag3 = 0;
                 Hanoi.ThreetoTwo();
-                drawClassic(0);
+                draw(0);
                 choice = _getch();
             }
         }
     }
-    if (choice == 51) {
+    if (choice == 51) { //если нажали 3
         if (!flag3 && !flag1 && !flag2) {
             ::flag3 = 1;
-            drawClassic(3);
+            if (tPlay == 3) Hanoi.data3[getLast(3)] = -Hanoi.data3[getLast(3)];
+            draw(3);
             choice = _getch();
         }
         else {
             if (flag3) {
                 ::flag3 = 0;
-                drawClassic(0);
+                if (tPlay == 3) Hanoi.data3[getLast(3)] = -Hanoi.data3[getLast(3)];
+                draw(0);
                 choice = _getch();
             }
-            if (flag1 && three<one && three!=0 || one==0) {system("color E4"); std::cerr << "\nТак нельзя!!!"; playClassic();}
-            if (flag1 && (three>one || three==0) && one!=0) {
+            if (flag1 && !checkMove(3, 1)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
+            if (flag1 && checkMove(3, 1)) {
                 ::flag1 = 0;
                 Hanoi.OnetoThree();
-                drawClassic(0);
+                draw(0);
                 choice = _getch();
             }
 
-            if (flag2 && three<two && three!=0 || two==0) {system("color E4"); std::cerr << "\nТак нельзя!!!"; playClassic();}
-            if (flag2 && (three>two || three==0) && two!=0) {
+            if (flag2 && !checkMove(3, 2)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
+            if (flag2 && checkMove(3, 2)) {
                 ::flag2 = 0;
                 Hanoi.TwotoThree();
-                drawClassic(0);
+                draw(0);
                 choice = _getch();
             }
         }
@@ -390,198 +429,178 @@ void playClassic()
     choice = _getch();
 
 }
-void playBicolor()
+
+int getLast(int i)//i -номер столба
 {
-
+    if (i == 1)
+        for (int j=0; j<2*allSize; ++j)
+            if (Hanoi.data1[j]!=0)
+                return j;
+    if (i == 2)
+        for (int j=0; j<2*allSize; ++j)
+            if (Hanoi.data2[j]!=0)
+                return j;
+    if (i == 3)
+        for (int j=0; j<2*allSize; ++j)
+            if (Hanoi.data3[j]!=0)
+                return j;
 }
-void playMagnet()
-{
 
-}
 
-void drawClassic(int up)
+void draw(int up)//если up=0 - ни диск не поднят, если 1 - поднят с 1 башни и т.п.
 {
     system("cls");
+    if (tPlay != 1 && allSize>6) system("mode con cols=80 lines=27");//увеличиваем поле, если не влазит
     system( "color E8" );
-    std::cout << "Выбор башни - \"1\", \"2\", \"3\"" << std::endl;
-    std::cout << "Количество ходов: " << step/2 << std::endl;
-    std::cout << "\n\n\n\n\n\n";
+    std::cout << " Количество ходов: " << step/2 << "                                Выбор башни - \"1\", \"2\", \"3\"" << std::endl;
+    std::cout << "\n\n";
 
-    int up_now = 0;
-
+    int up_now = 0;//то, что поднято сейчас (нужно для правильной отрисовки)
+    //рисуем поднятые диски
         if (up==1) {
-            for (int j=0; j<allSize; ++j)
-                if (Hanoi.data1[j]!=0)
-                {
-                    std::cout << "    ";//4
-                    std::cout << Classic[Hanoi.data1[j]];
-                    up_now = Hanoi.data1[j];
-                    break;
-                }
+            std::cout << "    ";//4
+            drawData(Hanoi.data1[getLast(1)]);
+            if (tPlay == 3) {
+                std::cout << "\n    ";
+                drawData(-Hanoi.data1[getLast(1)]);
+            }
+            up_now = Hanoi.data1[getLast(1)];
         }
         if (up==2) {
-            for (int j=0; j<allSize; ++j)
-                if (Hanoi.data2[j]!=0)
-                {
-                    std::cout << "                              ";//27+3
-                    std::cout << Classic[Hanoi.data2[j]];
-                    up_now = Hanoi.data2[j];
-                    break;
-                }
+            std::cout << "                              ";//27+3
+            drawData(Hanoi.data2[getLast(2)]);
+            if (tPlay == 3) {
+                std::cout << "\n                              ";
+                drawData(-Hanoi.data2[getLast(2)]);
+            }
+            up_now = Hanoi.data2[getLast(2)];
         }
         if (up==3) {
-            for (int j=0; j<allSize; ++j)
-                if (Hanoi.data3[j]!=0)
-                {
-                    std::cout << "                                                        ";//27+27+2
-                    std::cout << Classic[Hanoi.data3[j]];
-                    up_now = Hanoi.data3[j];
-                    break;
-                }
+            std::cout << "                                                        ";//27+27+2
+            drawData(Hanoi.data3[getLast(3)]);
+            if (tPlay == 3) {
+                std::cout << "\n                                                        ";
+                drawData(-Hanoi.data3[getLast(3)]);
+            }
+            up_now = Hanoi.data3[getLast(3)];
         }
 
     std::cout << "\n\n\n";
-    for (int i=0; i<allSize; ++i)
+    //рисуем дополнительные палочки только для двухцветной игры (больше они не нужны)
+    int i;
+    if (tPlay == 2) i = 0;
+    else i = allSize;
+    //рисуем не поднятые диски
+    for (i; i<2*allSize; ++i)
     {
         std::cout << "    ";//4
-        if (up_now == Hanoi.data1[i])
+        if (up_now == Hanoi.data1[i])//если диск поднят - рисуем на его месте палочку
             std::cout << Classic[0];
-        if (up_now != Hanoi.data1[i])
-            std::cout << Classic[Hanoi.data1[i]];
+        else
+            drawData(Hanoi.data1[i]);//иначе рисуем его самого
+
         std::cout << "         ";
         if (up_now == Hanoi.data2[i])
             std::cout << Classic[0];
-        if (up_now != Hanoi.data2[i])
-            std::cout << Classic[Hanoi.data2[i]];
+        else
+            drawData(Hanoi.data2[i]);
+
         std::cout << "         ";
         if (up_now == Hanoi.data3[i])
             std::cout << Classic[0];
-        if (up_now != Hanoi.data3[i])
-        std::cout << Classic[Hanoi.data3[i]];
+        else
+            drawData(Hanoi.data3[i]);
 
-        std::cout << "\n";
+        //для магнитной дорисовываем вторую(нижнюю) часть диска
 
+            if (tPlay == 3) {
+                std::cout << "\n    ";//4
+                if (up_now == Hanoi.data1[i])
+                    std::cout << Classic[0];
+                else
+                    drawData(-Hanoi.data1[i]);
+
+                std::cout << "         ";
+                if (up_now == Hanoi.data2[i])
+                    std::cout << Classic[0];
+                else
+                    drawData(-Hanoi.data2[i]);
+
+                std::cout << "         ";
+                if (up_now == Hanoi.data3[i])
+                    std::cout << Classic[0];
+                else
+                    drawData(-Hanoi.data3[i]);
+
+            }
+    std::cout << "\n";
     }
+
 
     std::cout << " _________________________ _________________________ _________________________"
                  "\n            1                         2                         3";
 
-    if (checkWin()) Win();
+    if (checkWin()) Win();//если победили то победили
 
-    if (watchOrPlay == 1) playClassic();
-    else if (step==0) moveToverClassic(allSize, 1, 2, 3);
+    if (watchOrPlay == 1) play();//если играем то играем
+    //если смотрим, то вызываем алгоритмы
+    else if (step == 0 && tPlay == 1) DestroyBicolor(allSize, 1, 2, 3);
+    else if (step == 0 && tPlay == 2) moveToverBicolor(allSize, 2, 3, 1);
+    else if (step == 0 && tPlay == 3) MTM_2(allSize, 1, 3, 2);
 
 }
 
-void drawBicolor(int up)
+void drawData(int data)//просто рисует разные виды дисков. Data - их размер
 {
-    system("cls");
-    system( "color E8" );
-    std::cout << "Выбор башни - \"1\", \"2\", \"3\"" << std::endl;
-    std::cout << "Количество ходов: " << step/2 << std::endl;
-    std::cout << "\n\n\n\n\n\n";
-
-    int up_now = 0;
-
-        if (up==1) {
-            for (int j=-allSize+1; j<allSize; ++j)
-                if (Hanoi2.data1[j]!=0)
-                {
-                    std::cout << "    ";//4
-                    if ((Hanoi2.data1[j]>0 && Hanoi2.data1[j]%2==1) || (Hanoi2.data1[j]<0 && Hanoi2.data1[j]%2==0))
-                        std::cout << Classic[abs(Hanoi2.data1[j])];
-                    else
-                        std::cout << Bicolor[abs(Hanoi2.data1[j])];
-                    up_now = Hanoi2.data1[j];
-                    break;
-                }
-        }
-        if (up==2) {
-            for (int j=-allSize+1; j<allSize; ++j)
-                if (Hanoi2.data2[j]!=0)
-                {
-                    std::cout << "                              ";//27+3
-
-                    if ((Hanoi2.data2[j]>0 && Hanoi2.data2[j]%2==1) || (Hanoi2.data2[j]<0 && Hanoi2.data2[j]%2==0))
-                        std::cout << Classic[abs(Hanoi2.data2[j])];
-                    else
-                        std::cout << Bicolor[abs(Hanoi2.data2[j])];
-                    up_now = Hanoi2.data2[j];
-                    break;
-                }
-        }
-        if (up==3) {
-            for (int j=-allSize+1; j<allSize; ++j)
-                if (Hanoi2.data3[j]!=0)
-                {
-                    std::cout << "                                                        ";//27+27+2
-                    if ((Hanoi2.data3[j]>0 && Hanoi2.data3[j]%2==1) || (Hanoi2.data3[j]<0 && Hanoi2.data3[j]%2==0))
-                        std::cout << Classic[abs(Hanoi2.data3[j])];
-                    else
-                        std::cout << Bicolor[abs(Hanoi2.data3[j])];
-                    up_now = Hanoi2.data3[j];
-                    break;
-                }
-        }
-
-
-    std::cout << "\n\n\n";
-    for (int i=-allSize+1; i<allSize; ++i)
+    if (tPlay == 1) std::cout << Classic[data];
+    if (tPlay == 2)
     {
-        std::cout << "    ";//4
-        if (up_now == Hanoi2.data1[i])
-            std::cout << Classic[0];
-        if (up_now != Hanoi2.data1[i])
-            if ((Hanoi2.data1[i]>0 && Hanoi2.data1[i]%2==1) || (Hanoi2.data1[i]<0 && Hanoi2.data1[i]%2==0))
-                std::cout << Classic[abs(Hanoi2.data1[i])];
-            else
-                std::cout << Bicolor[abs(Hanoi2.data1[i])];
-
-        std::cout << "         ";
-        if (up_now == Hanoi2.data2[i])
-            std::cout << Classic[0];
-        if (up_now != Hanoi2.data2[i])
-            if ((Hanoi2.data2[i]>0 && Hanoi2.data2[i]%2==1) || (Hanoi2.data2[i]<0 && Hanoi2.data2[i]%2==0))
-                std::cout << Classic[abs(Hanoi2.data2[i])];
-            else
-                std::cout << Bicolor[abs(Hanoi2.data2[i])];
-
-        std::cout << "         ";
-        if (up_now == Hanoi2.data3[i])
-            std::cout << Classic[0];
-        if (up_now != Hanoi2.data3[i])
-            if ((Hanoi2.data3[i]>0 && Hanoi2.data3[i]%2==1) || (Hanoi2.data3[i]<0 && Hanoi2.data3[i]%2==0))
-                std::cout << Classic[abs(Hanoi2.data3[i])];
-            else
-                std::cout << Bicolor[abs(Hanoi2.data3[i])];
-
-        std::cout << "\n";
-
+        if (checkColor(data))
+            std::cout << Classic[abs(data)];
+        else
+            std::cout << Bicolor[abs(data)];
     }
-
-
-    std::cout << " _________________________ _________________________ _________________________"
-                 "\n            1                         2                         3";
-
-    //if (checkWin()) Win();
-
+    if (tPlay == 3) {
+        if (data>0) std::cout << Plus[data];
+        else std::cout << Minus[abs(data)];
+    }
 }
 
-void drawMagnet(int up)
+bool checkColor(int i) //1-Classic, 0-Bicolor
 {
-
+    if (i>0) {
+        if ((i%2)==1)
+            return true;
+        else
+            return false;
+    }
+    if (i<=0) {
+        if ((abs(i)%2)==1)
+            return false;
+        else
+            return true;
+    }
 }
 
-int checkWin()
+int checkWin()//для классичекой и магнитной игры смотрим количество дисков на стержнях, для двухцветной - их цвета и количество
 {
-    int flag_win1 = 1;
     int flag_win2 = 1;
-    for (int i=0; i<allSize; ++i)
-        if (Hanoi.data2[i]==0) flag_win1=0;
-    for (int i=0; i<allSize; ++i)
-        if (Hanoi.data3[i]==0) flag_win2=0;
-    if (flag_win1 || flag_win2) return 1;
-    else return 0;
+    int flag_win3 = 1;
+    int flag_b_win1 = 1; //для Bicolor
+    int flag_b_win2 = 1;
+    for (int i=allSize; i<2*allSize; ++i)
+        if (Hanoi.data2[i]==0) flag_win2=0;
+    for (int i=allSize; i<2*allSize; ++i)
+        if (Hanoi.data3[i]==0) flag_win3=0;
+
+    for (int i=allSize; i<2*allSize; ++i)
+        if (!checkColor(Hanoi.data1[i]) || Hanoi.data1[i]==0) flag_b_win1=0;
+    for (int i=allSize; i<2*allSize; ++i)
+        if (checkColor(Hanoi.data2[i]) || Hanoi.data1[i]==0) flag_b_win2=0;
+
+    if ((flag_win2 || flag_win3) && (tPlay == 1 || tPlay == 3)) return 1;
+    if (flag_b_win1 && flag_b_win2 && tPlay==2) return 1;
+    return 0;
 }
 
 void Win()
@@ -592,30 +611,87 @@ void Win()
  "                                    ПОБЕДА!!!\n\n\n\n\n\n\n\n\n";
 }
 
-void doMoveClassic(int point1, int point2)
+void doMove(int point1, int point2)
 {
-    Sleep(1500);
+    Sleep(1000);
     step = step+2;
     system("cls");
-    drawClassic(point1);
-    Sleep(1500);
-    if (point1==1 && point2==2) {Hanoi.OnetoTwo(); drawClassic(0);}
-    if (point1==1 && point2==3) {Hanoi.OnetoThree(); drawClassic(0);}
-    if (point1==2 && point2==3) {Hanoi.TwotoThree(); drawClassic(0);}
-    if (point1==2 && point2==1) {Hanoi.TwotoOne(); drawClassic(0);}
-    if (point1==3 && point2==1) {Hanoi.ThreetoOne(); drawClassic(0);}
-    if (point1==3 && point2==2) {Hanoi.ThreetoTwo(); drawClassic(0);}
+    if (tPlay == 3 && point1 == 1) Hanoi.data1[getLast(1)] = -Hanoi.data1[getLast(1)];
+    if (tPlay == 3 && point1 == 2) Hanoi.data2[getLast(2)] = -Hanoi.data2[getLast(2)];
+    if (tPlay == 3 && point1 == 3) Hanoi.data3[getLast(3)] = -Hanoi.data3[getLast(3)];
+    draw(point1);
+    Sleep(1000);
+    if (point1==1 && point2==2) {Hanoi.OnetoTwo();  draw(0);}
+    if (point1==1 && point2==3) {Hanoi.OnetoThree(); draw(0);}
+    if (point1==2 && point2==3) {Hanoi.TwotoThree(); draw(0);}
+    if (point1==2 && point2==1) {Hanoi.TwotoOne(); draw(0);}
+    if (point1==3 && point2==1) {Hanoi.ThreetoOne(); draw(0);}
+    if (point1==3 && point2==2) {Hanoi.ThreetoTwo(); draw(0);}
 }
 
-void moveToverClassic(int amount, int point1, int point2, int temp)
+void moveTover(int amount, int point1, int point2, int temp)
 {
-    if (amount==0) return;
-    moveToverClassic(amount-1, point1, temp, point2);
-    doMoveClassic(point1, point2);
-    moveToverClassic(amount-1, temp, point2, point1);
+    if (amount <= 0) return;
+    moveTover(amount-1, point1, temp, point2);
+    doMove(point1, point2);
+    if (tPlay == 2) doMove(point1, point2);
+    moveTover(amount-1, temp, point2, point1);
+
 }
 
-int main(int argc, char *argv[])
+void moveToverBicolor(int amount, int point1, int point2, int temp) //не работает :((((((
+{
+    if (amount%2 == 0)
+        BildBicolor(amount, 1, 2, 3);
+    else
+        BildBicolor(amount-1, 1, 2, 3);
+    if (amount%2 == 0)
+        DestroyBicolor(amount, 3, 1, 2);
+    else
+        DestroyBicolor(amount-1, 3, 1, 2);
+}
+
+void BildBicolor(int amount, int point1, int point2, int temp)
+{
+    if (amount <= 0) return;
+    BildBicolor(amount-1, temp, point2, point1);
+    doMove(point2, temp);
+    moveTover(amount-1, point1, point2, temp);
+    doMove(point1, temp);
+    moveTover(amount-1, point2, temp, point1);
+}
+
+void DestroyBicolor(int amount, int point1, int point2, int temp)
+{
+    moveTover(amount-1, point1, point2, temp);
+    doMove(point1, temp);
+    if (amount <= 0) return;
+    moveTover(amount-1, point2, temp, point1);
+    doMove(point1, point2);
+    DestroyBicolor(amount-1, temp, point2, point1);
+}
+
+void MTM_1(int n, int i, int s, int d)
+{
+    if (n<=0) return;
+    MTM_1(n-1, i, s, d);
+    MTM_2(n-1, s, d, i);
+    doMove(i, s);
+    MTM_1(n-1, d, s, i);
+
+}
+
+void MTM_2(int n, int s, int d, int i)
+{
+    if (n<=0) return;
+    MTM_2(n-1, s, i, d);
+    doMove(s, d);
+    MTM_1(n-1, i, s, d);
+    MTM_2(n-1, s, d, i);
+}
+
+
+int main()
 {
     start();
     startMenu(1);

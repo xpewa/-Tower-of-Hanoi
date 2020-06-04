@@ -5,6 +5,13 @@
 #include <string>
 #include <cmath>
 
+void console_gotoxy(int column, int line) {
+    COORD coord;
+    coord.X = column;
+    coord.Y = line;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}
+
 void start();//заставка
 void startMenu(int switcher);//выбор действия(играть, смотреть)
 void rules();//правила
@@ -14,6 +21,7 @@ void play();//основная функция для игры
 int getLast(int i);//возвращает номер последнего диска на столбе i
 void draw(int up);//рисует игровое поле
 void drawData(int data);//рисует диски
+void drawData_color(int data, int color);
 int checkWin();//проверяет наступила ли победа
 void Win();//победа!
 void moveTover(int amount, int point1, int point2, int temp);//двигает башни (в основном для классической игры)
@@ -36,14 +44,7 @@ bool flag2 = 0;
 bool flag3 = 0;
 
 //для рисования дисков
-std::string Classic[10] = {"        |        ", "        O        ", "       OOO       ", "      OOOOO      ", "     OOOOOOO     ",
-                    "    OOOOOOOOO    ", "   OOOOOOOOOOO   ", "  OOOOOOOOOOOOO  ", " OOOOOOOOOOOOOOO ", "OOOOOOOOOOOOOOOOO"};
-std::string Bicolor[10] = {"        |        ", "        V        ", "       VVV       ", "      VVVVV      ", "     VVVVVVV     ",
-                    "    VVVVVVVVV    ", "   VVVVVVVVVVV   ", "  VVVVVVVVVVVVV  ", " VVVVVVVVVVVVVVV ", "VVVVVVVVVVVVVVVVV"};
-std::string Plus[10] = {"        |        ", "       |+|       ", "      |+++|      ", "     |+++++|     ", "    |+++++++|    ",
-                    "   |+++++++++|   ", "  |+++++++++++|  ", " |+++++++++++++| ", "|+++++++++++++++|", "|+++++++++++++++++|"};
-std::string Minus[10] = {"        |        ", "       |-|       ", "      |---|      ", "     |-----|     ", "    |-------|    ",
-                    "   |---------|   ", "  |-----------|  ", " |-------------| ", "|---------------|", "|-----------------|"};
+std::string Classic[1] = {"        |        "};
 
 //основная структура - в ней всё, что происходит с дисками
 struct Hanoi_type {
@@ -187,10 +188,12 @@ void start()
  "                                  ХАНОЙСКИЕ\n\n"
  "                                    бАШНИ";
     Sleep(3000);//задержка
+    startMenu(1);
 }
 
 void startMenu(int switcher)
 {
+    ::step = 0;
     system("cls");//очистка экрана
     switch (switcher)//возможные типы текста на экране
     {
@@ -234,8 +237,18 @@ void startMenu(int switcher)
 void rules()
 {
     system("cls");
-    std::cout << " ВЕРНУТЬСЯ: ESCAPE\n";
-    std::cout << " Здесь будут правила";
+    std::cout << " Пользование программой:\n"
+                 " Вернуться в главное меню: escape\n"
+                 " Выбор башен: клавиши 1, 2 и 3\n"
+                 " Поддерживается количество дисков до 9\n"
+                 " Правила игры:\n"
+                 " Классическая: Даны три стержня, на один из которых нанизаны кольца, причём кольца отличаются размером и лежат меньшее на большем."
+                 " Задача состоит в том, чтобы перенести пирамиду из колец за наименьшее число ходов на другой стержень."
+                 " За один раз разрешается переносить только одно кольцо, причём нельзя класть большее кольцо на меньшее.\n"
+                 " Двухцветная: различия с классической в том, что изначально на двух стержнях нанизаны кольца разных цветов."
+                 " Необходимо поменять местами некоторые диски так, чтобы получились две одноцветные пирамиды, причем пирамиды должны совпасть по цвету с начальным верхним диском.\n"
+                 " Магнитная: правила как в классической игре. За исключением того, что при каждом ходе диски переварачиваются,"
+                 " и нельзя ставить двух на друга стороны диска с одноимёнными зарядами.";
     int controller = _getch();
     if (controller == 27)//если Escape
         startMenu(1);
@@ -325,7 +338,6 @@ bool checkMove(int i, int k) //i - куда ходим, k - откуда
 
 void play()//вызывается, если играем
 {
-    ::step++;//считаем шаги
 
     int choice = _getch();
     if (choice == 27)//если esc
@@ -350,6 +362,7 @@ void play()//вызывается, если играем
             //если может - опускаем
             if (flag2 && checkMove(1, 2)) {
                 ::flag2 = 0;
+                ::step++;//считаем шаги
                 Hanoi.TwotoOne();
                 draw(0);
                 choice = _getch();
@@ -358,6 +371,7 @@ void play()//вызывается, если играем
             if (flag3 && !checkMove(1, 3)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
             if (flag3 && checkMove(1, 3)) {
                 ::flag3 = 0;
+                ::step++;//считаем шаги
                 Hanoi.ThreetoOne();
                 draw(0);
                 choice = _getch();
@@ -381,6 +395,7 @@ void play()//вызывается, если играем
             if (flag1 && !checkMove(2, 1)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
             if (flag1 && checkMove(2, 1)) {
                 ::flag1 = 0;
+                ::step++;//считаем шаги
                 Hanoi.OnetoTwo();
                 draw(0);
                 choice = _getch();
@@ -389,6 +404,7 @@ void play()//вызывается, если играем
             if (flag3 && !checkMove(2, 3)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
             if (flag3 && checkMove(2, 3)) {
                 ::flag3 = 0;
+                ::step++;//считаем шаги
                 Hanoi.ThreetoTwo();
                 draw(0);
                 choice = _getch();
@@ -412,6 +428,7 @@ void play()//вызывается, если играем
             if (flag1 && !checkMove(3, 1)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
             if (flag1 && checkMove(3, 1)) {
                 ::flag1 = 0;
+                ::step++;//считаем шаги
                 Hanoi.OnetoThree();
                 draw(0);
                 choice = _getch();
@@ -420,6 +437,7 @@ void play()//вызывается, если играем
             if (flag2 && !checkMove(3, 2)) {system("color E4"); std::cerr << "\nТак нельзя!!!"; play();}
             if (flag2 && checkMove(3, 2)) {
                 ::flag2 = 0;
+                ::step++;//считаем шаги
                 Hanoi.TwotoThree();
                 draw(0);
                 choice = _getch();
@@ -449,40 +467,41 @@ int getLast(int i)//i -номер столба
 
 void draw(int up)//если up=0 - ни диск не поднят, если 1 - поднят с 1 башни и т.п.
 {
-    system("cls");
+    if (step==0) system("cls");
+    else console_gotoxy(0,0);
     if (tPlay != 1 && allSize>6) system("mode con cols=80 lines=27");//увеличиваем поле, если не влазит
     system( "color E8" );
-    std::cout << " Количество ходов: " << step/2 << "                                Выбор башни - \"1\", \"2\", \"3\"" << std::endl;
+    std::cout << " Количество ходов: " << step << "                                Выбор башни - \"1\", \"2\", \"3\"" << std::endl;
     std::cout << "\n\n";
 
     int up_now = 0;//то, что поднято сейчас (нужно для правильной отрисовки)
     //рисуем поднятые диски
+    HANDLE hCons = GetStdHandle(STD_OUTPUT_HANDLE);
         if (up==1) {
             std::cout << "    ";//4
             drawData(Hanoi.data1[getLast(1)]);
-            if (tPlay == 3) {
-                std::cout << "\n    ";
-                drawData(-Hanoi.data1[getLast(1)]);
-            }
             up_now = Hanoi.data1[getLast(1)];
         }
+        else std::cout << "                              ";
         if (up==2) {
-            std::cout << "                              ";//27+3
+            //std::cout << "                              ";//30
             drawData(Hanoi.data2[getLast(2)]);
-            if (tPlay == 3) {
-                std::cout << "\n                              ";
-                drawData(-Hanoi.data2[getLast(2)]);
-            }
             up_now = Hanoi.data2[getLast(2)];
         }
+        else std::cout << "                          ";
         if (up==3) {
-            std::cout << "                                                        ";//27+27+2
+            //std::cout << "                                                        ";//27+27+2
             drawData(Hanoi.data3[getLast(3)]);
-            if (tPlay == 3) {
-                std::cout << "\n                                                        ";
-                drawData(-Hanoi.data3[getLast(3)]);
-            }
             up_now = Hanoi.data3[getLast(3)];
+        }
+        else std::cout << "                      ";
+        if (tPlay == 3) {
+            if (up==1) {std::cout << "\n    "; drawData(-Hanoi.data1[getLast(1)]);}
+            if (up!=1) std::cout << "\n                              ";
+            if (up==2) {drawData(-Hanoi.data2[getLast(2)]);}
+            if (up!=2) std::cout << "                          ";
+            if (up==3) drawData(-Hanoi.data3[getLast(3)]);
+            if (up!=3) std::cout << "                      ";
         }
 
     std::cout << "\n\n\n";
@@ -536,7 +555,7 @@ void draw(int up)//если up=0 - ни диск не поднят, если 1 - поднят с 1 башни и т.
     std::cout << "\n";
     }
 
-
+    SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8));
     std::cout << " _________________________ _________________________ _________________________"
                  "\n            1                         2                         3";
 
@@ -544,7 +563,7 @@ void draw(int up)//если up=0 - ни диск не поднят, если 1 - поднят с 1 башни и т.
 
     if (watchOrPlay == 1) play();//если играем то играем
     //если смотрим, то вызываем алгоритмы
-    else if (step == 0 && tPlay == 1) DestroyBicolor(allSize, 1, 2, 3);
+    else if (step == 0 && tPlay == 1) moveTover(allSize, 1, 2, 3);
     else if (step == 0 && tPlay == 2) moveToverBicolor(allSize, 2, 3, 1);
     else if (step == 0 && tPlay == 3) MTM_2(allSize, 1, 3, 2);
 
@@ -552,18 +571,43 @@ void draw(int up)//если up=0 - ни диск не поднят, если 1 - поднят с 1 башни и т.
 
 void drawData(int data)//просто рисует разные виды дисков. Data - их размер
 {
-    if (tPlay == 1) std::cout << Classic[data];
+    HANDLE hCons = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (tPlay == 1) drawData_color(data, 13);
     if (tPlay == 2)
     {
         if (checkColor(data))
-            std::cout << Classic[abs(data)];
+            drawData_color(data, 11);
         else
-            std::cout << Bicolor[abs(data)];
+            drawData_color(data, 13);
     }
     if (tPlay == 3) {
-        if (data>0) std::cout << Plus[data];
-        else std::cout << Minus[abs(data)];
+        if (data>0) drawData_color(data, 1);
+        else drawData_color(data, 4);
     }
+}
+
+void drawData_color(int data, int color)
+{
+    HANDLE hCons = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (data==0) std::cout << Classic[data];
+    if (abs(data)==1) {std::cout << "       ";SetConsoleTextAttribute(hCons, (WORD) ((color << 4) | 14)); if (tPlay==1 || tPlay==2) std::cout << "___"; else{if (data>0) std::cout << "|+|";
+     if (data<0) std::cout << "|-|";} SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8)); std::cout <<"       ";}
+    if (abs(data)==2) {std::cout << "      ";SetConsoleTextAttribute(hCons, (WORD) ((color << 4) | 14)); if (tPlay==1 || tPlay==2) std::cout << "_____"; else{if (data>0) std::cout << "|+++|";
+     if (data<0) std::cout << "|---|";} SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8)); std::cout <<"      ";}
+    if (abs(data)==3) {std::cout << "     ";SetConsoleTextAttribute(hCons, (WORD) ((color << 4) | 14)); if (tPlay==1 || tPlay==2) std::cout << "_______"; else{if (data>0) std::cout << "|+++++|";
+     if (data<0) std::cout << "|-----|";} SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8)); std::cout <<"     ";}
+    if (abs(data)==4) {std::cout << "    ";SetConsoleTextAttribute(hCons, (WORD) ((color << 4) | 14)); if (tPlay==1 || tPlay==2) std::cout << "_________"; else{if (data>0) std::cout << "|+++++++|";
+     if (data<0) std::cout << "|-------|";} SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8)); std::cout <<"    ";}
+    if (abs(data)==5) {std::cout << "   ";SetConsoleTextAttribute(hCons, (WORD) ((color << 4) | 14)); if (tPlay==1 || tPlay==2) std::cout << "___________"; else{if (data>0) std::cout << "|+++++++++|";
+     if (data<0) std::cout << "|---------|";} SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8)); std::cout <<"   ";}
+    if (abs(data)==6) {std::cout << "  ";SetConsoleTextAttribute(hCons, (WORD) ((color << 4) | 14)); if (tPlay==1 || tPlay==2) std::cout << "_____________"; else{if (data>0) std::cout << "|+++++++++++|";
+     if (data<0) std::cout << "|-----------|";} SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8)); std::cout <<"  ";}
+    if (abs(data)==7) {std::cout << " ";SetConsoleTextAttribute(hCons, (WORD) ((color << 4) | 14)); if (tPlay==1 || tPlay==2) std::cout << "_______________"; else{if (data>0) std::cout << "|+++++++++++++|";
+     if (data<0) std::cout << "|-------------|";} SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8)); std::cout <<" ";}
+    if (abs(data)==8) {std::cout << "";SetConsoleTextAttribute(hCons, (WORD) ((color << 4) | 14)); if (tPlay==1 || tPlay==2) std::cout << "|_______________|"; else{if (data>0) std::cout << "|+++++++++++++++|";
+     if (data<0) std::cout << "|---------------|";} SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8)); std::cout <<"";}
+    if (abs(data)==9) {std::cout << "";SetConsoleTextAttribute(hCons, (WORD) ((color << 4) | 14)); if (tPlay==1 || tPlay==2) std::cout << "_________________"; else{if (data>0) std::cout << "+++++++++++++++++";
+     if (data<0) std::cout << "-----------------";} SetConsoleTextAttribute(hCons, (WORD) ((14 << 4) | 8)); std::cout <<"";}
 }
 
 bool checkColor(int i) //1-Classic, 0-Bicolor
@@ -614,7 +658,7 @@ void Win()
 void doMove(int point1, int point2)
 {
     Sleep(1000);
-    step = step+2;
+    step++;
     system("cls");
     if (tPlay == 3 && point1 == 1) Hanoi.data1[getLast(1)] = -Hanoi.data1[getLast(1)];
     if (tPlay == 3 && point1 == 2) Hanoi.data2[getLast(2)] = -Hanoi.data2[getLast(2)];
@@ -636,7 +680,6 @@ void moveTover(int amount, int point1, int point2, int temp)
     doMove(point1, point2);
     if (tPlay == 2) doMove(point1, point2);
     moveTover(amount-1, temp, point2, point1);
-
 }
 
 void moveToverBicolor(int amount, int point1, int point2, int temp) //не работает :((((((
@@ -694,7 +737,6 @@ void MTM_2(int n, int s, int d, int i)
 int main()
 {
     start();
-    startMenu(1);
 
     return 0;
 }
